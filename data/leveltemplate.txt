@@ -1,0 +1,21 @@
+NAME=New Level;
+
+SIZE=6x6;
+
+LAYER0=
+      
+      
+      
+      
+      
+      
+;
+
+LAYER1=
+      
+      
+      
+      
+      
+      
+;

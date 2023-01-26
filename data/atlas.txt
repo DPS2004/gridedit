@@ -1,0 +1,6 @@
+. = floor
+X = pit
+space = empty space
+
+p = spawn point
+? = goal
