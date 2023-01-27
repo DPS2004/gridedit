@@ -59,6 +59,36 @@ st:setupdate(function(self,dt)
 		cs.basedir = project.projdirectory .. '/' .. self.list[self.cursor].filename .. '/'
 		cs.config = dofile(cs.basedir .. 'config.lua')
 		
+		local ftiles = love.filesystem.getDirectoryItems(cs.basedir..'tiles')
+		local tiles = {}
+		
+		
+		for i,v in ipairs(ftiles) do
+			if string.sub(v,-4,-1) == '.png' then
+				local tilename = string.sub(v,0,-5)
+				local newtile = {}
+				newtile.image = love.graphics.newImage(cs.basedir..'tiles/'..tilename..'.png')
+				if love.filesystem.getInfo(cs.basedir..'tiles/'..tilename..'.lua') then
+					newtile.properties = dofile(cs.basedir..'tiles/'..tilename..'.lua')
+				else
+					newtile.properties = {}
+				end
+				
+				tiles[tilename] = newtile
+			end
+		end
+		cs.tiles = tiles
+		
+		cs.palette = dofile(cs.basedir .. 'palette.lua')
+		if cs.palette[-1] then
+			for i=0,config.layers-1 do
+				cs.palette[i] = cs.palette[-1]
+			end
+		end
+		
+		
+		
+		
 		cs:init()
 	end
 	

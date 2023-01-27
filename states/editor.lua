@@ -179,9 +179,9 @@ st:setinit(function(self)
 	
 	
 	
-	self.layerpalettes = {}
 	--[[
-	self.layerpalettes[0] = {
+	self.palette = {}
+	self.palette[0] = {
 		'empty',
 		'properties',
 		'floor',
@@ -189,7 +189,7 @@ st:setinit(function(self)
 		'goal'
 	}
 	
-	self.layerpalettes[1] = {
+	self.palette[1] = {
 		'empty',
 		'properties',
 		'wall',
@@ -285,7 +285,8 @@ st:setupdate(function(self,dt)
 		self.grid:update(dt,true)
 		
 		if self.showpalettes then
-			if helpers.inrect(0,#self.layerpalettes[self.edlayer]*60,660,660+60,mousex,mousey) then
+			print(self.edlayer)
+			if helpers.inrect(0,#self.palette[self.edlayer]*60,660,660+60,mousex,mousey) then
 				if mouse.pressed == 1 then
 					self.selectedindex = math.floor(mousex / 60) + 1
 				end
@@ -316,12 +317,12 @@ st:setupdate(function(self,dt)
 			if helpers.inrect(0,854,180,180+480,mousex,mousey) then
 				
 				
-				if self.layerpalettes[self.edlayer][self.selectedindex] ~= 'properties' then
+				if self.palette[self.edlayer][self.selectedindex] ~= 'properties' then
 					if mouse.pressed >= 1 then
 						if (self.lastplaced.x ~= self.grid.cursor.x) or (self.lastplaced.y ~= self.grid.cursor.y) then
 							self.lastplaced.x = self.grid.cursor.x
 							self.lastplaced.y = self.grid.cursor.y
-							self.grid:add(self.layerpalettes[self.edlayer][self.selectedindex],self.grid.cursor.x,self.grid.cursor.y,self.edlayer)
+							self.grid:add(self.palette[self.edlayer][self.selectedindex],self.grid.cursor.x,self.grid.cursor.y,self.edlayer)
 						end
 					else
 						if mouse.altpress >= 1 then
@@ -403,7 +404,7 @@ st:setfgdraw(function(self)
 	if self.showpalettes then
 		local distance = 60
 		local spritescale = distance / self.grid.scalex 
-		for i,v in ipairs(self.layerpalettes[self.edlayer]) do
+		for i,v in ipairs(self.palette[self.edlayer]) do
 			love.graphics.draw(sprites.editorpalette[v][1],(i-1)*distance,660,0,spritescale,spritescale)
 			if self.selectedindex == i then
 				love.graphics.setLineWidth(2)

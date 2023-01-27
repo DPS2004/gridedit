@@ -296,7 +296,7 @@ function Gridmanager:drawtocanvas(editor)
 		color()
 		
 		if cs.selectedindex then
-			local spr = sprites.editorpalette[cs.layerpalettes[cs.edlayer][cs.selectedindex]]
+			local spr = sprites.editorpalette[cs.palette[cs.edlayer][cs.selectedindex]]
 			love.graphics.draw(spr[1],self.cursor.x*self.scalex,(self.cursor.y+1)*self.scaley-spr[2])
 		end
 		love.graphics.setLineWidth(1)
