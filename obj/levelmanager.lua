@@ -6,34 +6,16 @@ function LevelManager:initialize(params)
 	self.skiprender = true
 	self.skipupdate = true
 	
-	self.mapper = {}
-	self.mapper['.'] = 'floor'
-	self.mapper['X'] = 'pit'
-	self.mapper['#'] = 'wall'
-	self.mapper['p'] = 'playerspawn'
-	self.mapper['?'] = 'goal'
-	self.mapper['b'] = 'box'
-	self.mapper['n'] = 'nullbox'
-	self.mapper['c'] = 'chainbox'
-	self.mapper['k'] = 'pickybox'
-	
-	
-	self.mapper_inv = {}
-	for k,v in pairs(self.mapper) do
-		self.mapper_inv[v] = k
-	end
-  
-	self.mapper_inv['empty'] = ' '
 	
   Entity.initialize(self,params)
 end
 
-function LevelManager:loadproperties(filename,rawtext)
+function LevelManager:loadproperties_txt(filename,rawtext)
+	local levelstring = ''
 	if rawtext then
 		print('loading raw')
 		levelstring = rawtext
 	else
-		
 		levelstring = love.filesystem.read(cs.basedir..'levels/'..filename..".txt")
 	end
 	
@@ -67,7 +49,7 @@ function LevelManager:loadproperties(filename,rawtext)
 	
 end
 
-function LevelManager:loadlevel(filename,grid,static,rawtext,editor)
+function LevelManager:loadlevel_txt(filename,grid,static,rawtext,editor)
 	grid.static = static or grid.static
 	
 	local levelstring = ''
@@ -93,6 +75,13 @@ function LevelManager:loadlevel(filename,grid,static,rawtext,editor)
 	level.filename = filename 
 	level.layers = {}
 	
+	local mapper = {}
+	for k,v in pairs(cs.tiles) do
+		if v.script.char then
+			mapper[v.script.char] = k
+		end
+	end
+	
 	
 	
 	local function parselayer(s,layer)
@@ -108,8 +97,8 @@ function LevelManager:loadlevel(filename,grid,static,rawtext,editor)
 			for _i=1,#v do
 				local x = _i - 1
 				local c = string.sub(v,_i,_i)
-				if self.mapper[c] then
-					grid:add(self.mapper[c],x,y,layer)
+				if mapper[c] then
+					grid:add(mapper[c],x,y,layer)
 				end
 			end
 				
@@ -180,18 +169,84 @@ function LevelManager:loadlevel(filename,grid,static,rawtext,editor)
 	
 end
 
+
+function LevelManager:loadlevel_json(filename,grid,static,rawtext,editor)
+	grid.static = static or grid.static
+	
+	local levelstring = ''
+	if rawtext then
+		print('loading raw')
+		levelstring = rawtext
+	else
+		
+		levelstring = love.filesystem.read(cs.basedir..'levels/'..filename..".json")
+		
+	end
+	local ltable = json.decode(levelstring)
+	
+	
+	local level = {}
+	level.filename = filename 
+	
+	--example
+	--[[
+	example = {
+		properties = {
+			name = 'test',
+			width = 6,
+			height = 6,
+			camera = {
+				width = 6,
+				height = 6,
+			}
+		}
+		grid = {
+			{x=0,y=0,z=0,tile='empty'}
+		}
+	}
+	]]--
+	
+	level.name = ltable.properties.name
+	level.width = ltable.properties.width
+	level.height = ltable.properties.height
+	if ltable.properties.camera then
+		level.usecamera = true
+		level.camwidth = ltable.properties.camera.width
+		level.camheight = ltable.properties.camera.height
+	end
+	
+	
+	
+	
+	grid:setup(level,cs.config.layers,editor)
+	
+	for i,v in ipairs(ltable.grid) do
+		grid:add(v.tile,v.x,v.y,v.z)
+	end
+	
+		
+	
+	return level
+	
+	
+end
+
 function LevelManager:resizelevel(grid,level)
 	--This function is only for the level editor, if we need to resize grids in-game, a different solution will be needed.
 	local newgrid = em.init('gridmanager',{static = true})
 	newgrid.scaler.intscaling = false
 	newgrid:setup(level,2)
+	newgrid.scalex = cs.config.tilesize.x
+	newgrid.scaley = cs.config.tilesize.y
 	
 	for y=0,level.height-1 do
 		for x=0,level.width-1 do
 			for z=0,1 do
 				local tile = grid:get(x,y,z)
 				if tile then
-					newgrid:add(tile.name,x,y,z)
+					newgrid:add(tile,x,y,z)
+				else
+					newgrid:add('empty',x,y,z)
 				end
 				
 			end
@@ -202,9 +257,15 @@ function LevelManager:resizelevel(grid,level)
 	
 end
 
-function LevelManager:savelevel(grid,level,filename)
+function LevelManager:savelevel_txt(grid,level,filename)
 	
-
+	
+	local mapper_inv = {}
+	for k,v in pairs(cs.tiles) do
+		if v.script.char then
+			mapper_inv[k] = v.script.char
+		end
+	end
 	
 	local layerstr = {}
 	layerstr[0] = ''
@@ -214,7 +275,7 @@ function LevelManager:savelevel(grid,level,filename)
 		for z=0,1 do
 			for x =0,level.width-1 do
 				local t = grid:get(x,y,z)
-				local c = self.mapper_inv[t.name]
+				local c = mapper_inv[t]
 				layerstr[z] = layerstr[z] .. c
 			end
 			layerstr[z] = layerstr[z] .. '\n'
@@ -239,6 +300,50 @@ function LevelManager:savelevel(grid,level,filename)
 	print('saving level!')
 	love.filesystem.createDirectory(cs.basedir..'levels')
 	love.filesystem.write(cs.basedir..'levels/'..filename .. '.txt',ls)
+	
+	
+end
+
+
+function LevelManager:savelevel_json(grid,level,filename)
+	
+	
+	
+	local ltable = {}
+	ltable.properties = {}
+	
+	ltable.grid = {}
+	for y=0,level.height-1 do
+		for z=0,1 do
+			for x =0,level.width-1 do
+				local t = grid:get(x,y,z)
+				if t ~= 'empty' then
+					table.insert(ltable.grid,{x=x,y=y,z=z,tile=t})
+				end
+			end
+		end
+	end
+	
+	
+	
+	ltable.properties.name = level.name
+	ltable.properties.width = level.width
+	ltable.properties.height = level.height
+	
+	if level.usecamera then
+		ltable.properties.camera = {
+			width = level.camwidth,
+			height = level.camheight
+		}
+	end
+		
+	
+	
+	print('saving level!')
+	love.filesystem.createDirectory(cs.basedir..'levels')
+	
+	dpf.savejson(cs.basedir..'levels/'..filename .. '.json',ltable)
+	--love.filesystem.write(cs.basedir..'levels/'..filename .. '.json',json.encode(ltable))
 	
 	
 end

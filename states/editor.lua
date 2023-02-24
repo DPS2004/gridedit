@@ -72,8 +72,11 @@ st:setinit(function(self)
 				print('save '.. textbox.input)
 				textbox.visible = false
 				self.level.filename = textbox.input
-				self.levelmanager:savelevel(self.grid,self.level,self.filenametext.input)
-				
+				if cs.config.format == 'txt' then
+					self.levelmanager:savelevel_txt(self.grid,self.level,self.filenametext.input)
+				else
+					self.levelmanager:savelevel_json(self.grid,self.level,self.filenametext.input)
+				end
 			end
 			
 			self.filenametext.visible = true
@@ -94,7 +97,7 @@ st:setinit(function(self)
 			print('load '.. textbox.input)
 			textbox.visible = false
 			
-			if love.filesystem.read(self.basedir..'levels/'..textbox.input..".txt")then
+			if love.filesystem.read(self.basedir..'levels/'..textbox.input.."."..cs.config.format)then
 				self:loadlevel(textbox.input)
 				self:showeditorui()
 			else
@@ -111,8 +114,13 @@ st:setinit(function(self)
 	self.newbutton.onclick = function(button) 
 		
 		print('new level')
-		
-		self:loadlevel('newlevel',love.filesystem.read("data/leveltemplate.txt"))
+		local ltemplate = ''
+		if cs.config.format == 'txt' then
+			ltemplate = love.filesystem.read("data/leveltemplate.txt")
+		else
+			ltemplate = love.filesystem.read("data/leveltemplate.json")
+		end
+		self:loadlevel('newlevel',ltemplate)
 		self:showeditorui()
 		
 	end
@@ -236,7 +244,12 @@ function st:startinput()
 end
 
 function st:loadlevel(filename,raw)
-	self.level = self.levelmanager:loadlevel(filename,self.grid,true,raw,true)
+	
+	if cs.config.format == 'txt' then
+		self.level = self.levelmanager:loadlevel_txt(filename,self.grid,true,raw,true)
+	else
+		self.level = self.levelmanager:loadlevel_json(filename,self.grid,true,raw,true)
+	end
 	self.grid:updatescale(854,480)
 	
 	self.nametext.input = self.level.name
@@ -285,7 +298,6 @@ st:setupdate(function(self,dt)
 		self.grid:update(dt,true)
 		
 		if self.showpalettes then
-			print(self.edlayer)
 			if helpers.inrect(0,#self.palette[self.edlayer]*60,660,660+60,mousex,mousey) then
 				if mouse.pressed == 1 then
 					self.selectedindex = math.floor(mousex / 60) + 1
@@ -405,7 +417,11 @@ st:setfgdraw(function(self)
 		local distance = 60
 		local spritescale = distance / self.grid.scalex 
 		for i,v in ipairs(self.palette[self.edlayer]) do
-			love.graphics.draw(sprites.editorpalette[v][1],(i-1)*distance,660,0,spritescale,spritescale)
+			if self.tiles[v].script.drawfunc then
+				self.tiles[v].script.drawfunc((i-1)*distance,660,self,self.tiles[v],true)
+			else
+				love.graphics.draw(self.tiles[v].image,(i-1)*distance,660,0,spritescale,spritescale)
+			end
 			if self.selectedindex == i then
 				love.graphics.setLineWidth(2)
 				love.graphics.rectangle('line',(i-1)*distance,660,distance,distance)

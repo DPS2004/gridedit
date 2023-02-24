@@ -168,7 +168,8 @@ end
 	
 
 function Gridmanager:add(obj, x, y, z)
-	local new = em.init('ge_' .. obj, { grid = self, x = x, y = y, z = z, id = self.objcount })
+	local new = em.init('ge', { grid = self, x = x, y = y, z = z, id = self.objcount })
+	new.obj = obj
 	self.objcount = self.objcount + 1
 
 	
@@ -210,7 +211,7 @@ end
 function Gridmanager:get(x, y, z)
 	if self.g[x] and self.g[x][y] then
 		if z then
-			return self.g[x][y][z]
+			return self.g[x][y][z].obj
 		else
 			return pairs(self.g[x][y])
 		end
@@ -252,16 +253,28 @@ function Gridmanager:drawlayer(z,c,ctrans,editor)
 	for x = 0, self.width - 1 do
 		for y = 0, self.height - 1 do
 			
-			local obj = self:get(x, y, z)
-			queue.queue(obj.dy,function() 
-				if ctrans and self.cursor.x == x and self.cursor.y == y and z == cs.edlayer then
-					color(1,1,1,0.5)
-				else
-					color(c)
-				end
+			local objname = self:get(x, y, z)
+			local obj = cs.tiles[objname]
+				if objname ~= 'empty' then
+				queue.queue(y,function() 
+					if ctrans and self.cursor.x == x and self.cursor.y == y and z == cs.edlayer then
+						color(1,1,1,0.5)
+					else
+						color(c)
+					end
 					
-				obj:draw(nil,editor) 
-			end)
+					if obj.script.drawfunc then
+						obj.script.drawfunc(x* cs.grid.scalex,y* cs.grid.scaley,cs,obj)
+					else
+						love.graphics.draw(
+							obj.image,
+							x * cs.grid.scalex,
+							y * cs.grid.scaley - obj.yoffset
+						)
+					end
+					--obj:draw(nil,editor) 
+				end)
+			end
 			--self:get(x,y,z):dbdraw()
 		end
 	end
@@ -296,11 +309,16 @@ function Gridmanager:drawtocanvas(editor)
 		color()
 		
 		if cs.selectedindex then
-			local spr = sprites.editorpalette[cs.palette[cs.edlayer][cs.selectedindex]]
-			love.graphics.draw(spr[1],self.cursor.x*self.scalex,(self.cursor.y+1)*self.scaley-spr[2])
+			local tile = cs.tiles[cs.palette[cs.edlayer][cs.selectedindex]]
+			if tile.script.drawfunc then
+				tile.script.drawfunc(self.cursor.x*self.scalex,self.cursor.y*self.scaley,cs,tile)
+			else
+				love.graphics.draw(tile.image,self.cursor.x*self.scalex,(self.cursor.y+1)*self.scaley - tile.image:getHeight())
+			end
 		end
 		love.graphics.setLineWidth(1)
-		love.graphics.rectangle('line',self.cursor.x*self.scalex,self.cursor.y*self.scaley,self.scalex,self.scaley)
+		color(1,1,1,0.75)
+		love.graphics.rectangle('line',self.cursor.x*self.scalex,self.cursor.y*self.scaley,self.scalex+1,self.scaley+1)
 		
 		
 	end

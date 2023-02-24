@@ -69,20 +69,63 @@ st:setupdate(function(self,dt)
 				local newtile = {}
 				newtile.image = love.graphics.newImage(cs.basedir..'tiles/'..tilename..'.png')
 				if love.filesystem.getInfo(cs.basedir..'tiles/'..tilename..'.lua') then
-					newtile.properties = dofile(cs.basedir..'tiles/'..tilename..'.lua')
+					newtile.script = dofile(cs.basedir..'tiles/'..tilename..'.lua')
 				else
-					newtile.properties = {}
+					newtile.script = {}
 				end
 				
+				if newtile.script.yoffset then
+					newtile.yoffset = yoffset
+				else
+					newtile.yoffset = 0
+				end
+				newtile.yoffset = newtile.yoffset + (newtile.image:getHeight() - cs.config.tilesize.y)
 				tiles[tilename] = newtile
 			end
 		end
+		
+		tiles['empty'] = {
+			image = love.graphics.newImage('assets/cross.png'),
+			script = {
+				drawfunc = function(x,y,cs,tile,editor)
+					if editor then
+						love.graphics.draw(tile.image,x,y,0,60/tile.image:getWidth(),60/tile.image:getHeight())
+					else
+						love.graphics.draw(tile.image,x,y,0,cs.grid.scalex/tile.image:getWidth(),cs.grid.scaley/tile.image:getHeight())
+					end
+				end,
+				char = ' '
+			},
+			yoffset = 0
+		}
+		tiles['properties'] = {
+			image = love.graphics.newImage('assets/editorproperties.png'),
+			script = {
+				drawfunc = function(x,y,cs,tile,editor)
+					if editor then
+						love.graphics.draw(tile.image,x,y,0,60/tile.image:getWidth(),60/tile.image:getHeight())
+					else
+						love.graphics.draw(tile.image,x,y,0,cs.grid.scalex/tile.image:getWidth(),cs.grid.scaley/tile.image:getHeight())
+					end
+				end
+			},
+			yoffset = 0
+		}
+		
 		cs.tiles = tiles
 		
-		cs.palette = dofile(cs.basedir .. 'palette.lua')
-		if cs.palette[-1] then
-			for i=0,config.layers-1 do
-				cs.palette[i] = cs.palette[-1]
+		local pal = dofile(cs.basedir .. 'palette.lua')
+		if pal[-1] then
+			for i=0,cs.config.layers-1 do
+				pal[i] = pal[-1]
+			end
+		end
+		
+		cs.palette = {}
+		for i=0,cs.config.layers-1 do
+			cs.palette[i] = {'empty','properties'}
+			for _i,_v in ipairs(pal[i]) do
+				table.insert(cs.palette[i],_v)
 			end
 		end
 		
